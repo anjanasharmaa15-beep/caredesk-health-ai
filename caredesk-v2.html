@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CareDesk — AI Front-Desk Assistant</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --teal-50:#E1F5EE;--teal-100:#9FE1CB;--teal-200:#5DCAA5;
+  --teal-400:#1D9E75;--teal-600:#0F6E56;--teal-800:#085041;
+  --amber-50:#FAEEDA;--amber-100:#FAC775;--amber-800:#633806;
+  --red-50:#FCEBEB;--red-200:#F09595;--red-800:#501313;
+  --gray-50:#F7F6F3;--gray-100:#EDEDEA;--gray-200:#D3D1C7;
+  --gray-400:#888780;--gray-600:#5F5E5A;--gray-800:#2C2C2A;
+  --white:#FFFFFF;
+  --text-primary:#1A1A18;--text-secondary:#5F5E5A;--text-muted:#9C9B96;
+  --border:rgba(0,0,0,0.08);
+  --radius-sm:8px;--radius-md:12px;--radius-lg:16px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--gray-50);min-height:100vh;display:flex;flex-direction:column;color:var(--text-primary);}
+
+/* TOPBAR */
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:baseline;gap:6px;}
+.logo-mark{font-family:'Instrument Serif',serif;font-size:21px;color:var(--teal-600);letter-spacing:-0.3px;}
+.logo-tag{font-size:11px;font-weight:500;color:var(--text-muted);letter-spacing:.05em;text-transform:uppercase;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.practice-select{font-family:'DM Sans',sans-serif;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;background:var(--gray-50);color:var(--text-primary);cursor:pointer;outline:none;}
+.practice-select:focus{border-color:var(--teal-400);}
+.status-pill{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--teal-600);background:var(--teal-50);padding:4px 10px;border-radius:20px;font-weight:500;}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--teal-400);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* NAV TABS */
+.nav-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--white);padding:0 28px;}
+.nav-tab{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:12px 16px;border:none;background:none;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;}
+.nav-tab:hover{color:var(--text-secondary);}
+.nav-tab.active{color:var(--teal-600);border-bottom-color:var(--teal-600);}
+
+/* LAYOUT */
+.main{flex:1;display:flex;gap:18px;max-width:1120px;width:100%;margin:0 auto;padding:24px 24px;align-items:flex-start;}
+.sidebar{width:230px;flex-shrink:0;display:flex;flex-direction:column;gap:14px;}
+.chat-area{flex:1;display:flex;flex-direction:column;gap:0;min-width:0;}
+
+/* PANELS */
+.panel{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;}
+.panel-title{font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;}
+
+/* QUICK PROMPTS */
+.qp-btn{display:block;width:100%;text-align:left;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-secondary);padding:8px 10px;border-radius:var(--radius-sm);border:1px solid transparent;background:transparent;cursor:pointer;transition:all .15s;line-height:1.4;margin-bottom:2px;}
+.qp-btn:hover{background:var(--teal-50);color:var(--teal-800);border-color:var(--teal-100);}
+
+/* CAPABILITIES */
+.cap-item{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--text-secondary);line-height:1.4;margin-bottom:7px;}
+.cap-dot{width:6px;height:6px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+.cap-dot.on{background:var(--teal-400);}
+.cap-dot.off{background:var(--gray-200);}
+
+/* ESCALATION LOG */
+.esc-empty{font-size:12px;color:var(--text-muted);font-style:italic;}
+.esc-item{background:var(--amber-50);border:1px solid var(--amber-100);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:8px;font-size:12px;color:var(--amber-800);line-height:1.5;}
+.esc-item-time{font-size:11px;color:var(--gray-400);margin-top:3px;}
+.esc-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--amber-100);color:var(--amber-800);font-size:10px;font-weight:500;border-radius:20px;padding:2px 7px;margin-left:6px;}
+
+/* CHAT WINDOW */
+.chat-window{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;}
+.chat-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--white);}
+.bot-avatar{width:36px;height:36px;border-radius:50%;background:var(--teal-50);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.bot-name{font-size:14px;font-weight:500;}
+.bot-desc{font-size:11px;color:var(--text-muted);margin-top:1px;}
+.clear-btn{margin-left:auto;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text-muted);background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 12px;cursor:pointer;transition:all .15s;}
+.clear-btn:hover{color:var(--text-secondary);border-color:var(--gray-200);}
+
+.messages{overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;min-height:320px;max-height:380px;scroll-behavior:smooth;}
+.msg-row{display:flex;gap:10px;align-items:flex-start;}
+.msg-row.user{flex-direction:row-reverse;}
+.msg-icon{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;}
+.msg-icon.bot{background:var(--teal-50);}
+.msg-icon.user{background:var(--gray-100);}
+.bubble{max-width:74%;padding:10px 13px;border-radius:var(--radius-md);font-size:13.5px;line-height:1.65;}
+.bubble.bot{background:var(--gray-50);border:1px solid var(--border);color:var(--text-primary);border-radius:4px var(--radius-md) var(--radius-md) var(--radius-md);}
+.bubble.user{background:var(--teal-800);color:var(--white);border-radius:var(--radius-md) 4px var(--radius-md) var(--radius-md);}
+.msg-meta{font-size:11px;color:var(--text-muted);margin-top:4px;display:flex;align-items:center;gap:6px;}
+.disclaimer-tag{font-size:10px;background:var(--gray-100);color:var(--text-muted);padding:2px 7px;border-radius:20px;}
+.disclaimer-tag.flagged{background:#FAEEDA;color:#854F0B;}
+
+.bubble.typing{display:flex;gap:5px;align-items:center;padding:14px;}
+.typing-dot{width:6px;height:6px;border-radius:50%;background:var(--gray-200);animation:bounce 1.2s infinite;}
+.typing-dot:nth-child(2){animation-delay:.2s;}
+.typing-dot:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{0%,80%,100%{transform:translateY(0);}40%{transform:translateY(-5px);}}
+
+.input-area{padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;}
+.input-area textarea{flex:1;font-family:'DM Sans',sans-serif;font-size:13.5px;border:1px solid var(--border);border-radius:var(--radius-md);padding:9px 13px;resize:none;min-height:40px;max-height:110px;line-height:1.5;color:var(--text-primary);background:var(--gray-50);outline:none;transition:border-color .15s;}
+.input-area textarea:focus{border-color:var(--teal-400);background:var(--white);}
+.input-area textarea::placeholder{color:var(--text-muted);}
+.send-btn{width:40px;height:40px;border-radius:50%;background:var(--teal-600);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,transform .1s;}
+.send-btn:hover{background:var(--teal-800);}
+.send-btn:active{transform:scale(.95);}
+.send-btn:disabled{background:var(--gray-200);cursor:not-allowed;}
+.send-btn svg{width:15px;height:15px;fill:white;}
+.chat-footer{padding:6px 14px 10px;font-size:11px;color:var(--text-muted);text-align:center;}
+
+/* API BANNER */
+.api-banner{background:#FFF8EC;border:1px solid var(--amber-100);border-radius:var(--radius-md);padding:11px 14px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--amber-800);margin:14px 14px 0;}
+.api-banner input{flex:1;font-family:'DM Sans',sans-serif;font-size:13px;border:1px solid var(--amber-100);border-radius:var(--radius-sm);padding:6px 10px;background:white;outline:none;color:var(--text-primary);}
+.api-banner input:focus{border-color:var(--teal-400);}
+.api-banner button{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:6px 14px;background:var(--teal-600);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;}
+
+/* INTAKE MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:200;}
+.modal{background:var(--white);border-radius:var(--radius-lg);padding:28px 28px 24px;width:420px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.12);}
+.modal-logo{font-family:'Instrument Serif',serif;font-size:20px;color:var(--teal-600);margin-bottom:4px;}
+.modal-sub{font-size:13px;color:var(--text-muted);margin-bottom:22px;}
+.form-field{margin-bottom:16px;}
+.form-label{font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px;}
+.form-input{width:100%;font-family:'DM Sans',sans-serif;font-size:13.5px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;background:var(--gray-50);color:var(--text-primary);outline:none;transition:border-color .15s;}
+.form-input:focus{border-color:var(--teal-400);background:var(--white);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.start-btn{width:100%;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;padding:11px;background:var(--teal-600);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;margin-top:6px;transition:background .15s;}
+.start-btn:hover{background:var(--teal-800);}
+.intake-note{font-size:11px;color:var(--text-muted);text-align:center;margin-top:10px;line-height:1.5;}
+
+/* SUMMARY PANEL */
+.summary-panel{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0;overflow:hidden;}
+.summary-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.summary-title{font-size:15px;font-weight:500;}
+.summary-sub{font-size:12px;color:var(--text-muted);margin-top:2px;}
+.summary-body{padding:20px;}
+.summary-section{margin-bottom:18px;}
+.summary-section-title{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:8px;}
+.summary-info-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);}
+.summary-info-row:last-child{border-bottom:none;}
+.summary-info-label{color:var(--text-secondary);}
+.summary-info-val{font-weight:500;color:var(--text-primary);}
+.summary-topics{display:flex;flex-wrap:wrap;gap:6px;}
+.topic-tag{font-size:12px;background:var(--teal-50);color:var(--teal-800);border:1px solid var(--teal-100);border-radius:20px;padding:3px 10px;}
+.summary-flag{background:var(--amber-50);border:1px solid var(--amber-100);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--amber-800);line-height:1.5;margin-bottom:8px;}
+.handoff-btn{width:100%;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:10px;background:var(--teal-600);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;margin-top:4px;transition:background .15s;}
+.handoff-btn:hover{background:var(--teal-800);}
+.handoff-btn.secondary{background:transparent;color:var(--teal-600);border:1px solid var(--teal-200);margin-top:8px;}
+.handoff-btn.secondary:hover{background:var(--teal-50);}
+.summary-generating{text-align:center;padding:30px 20px;color:var(--text-muted);font-size:13px;}
+
+/* HOW IT WORKS TAB */
+.how-section{padding:24px 28px;max-width:700px;}
+.how-h2{font-family:'Instrument Serif',serif;font-size:22px;color:var(--text-primary);margin-bottom:6px;}
+.how-lead{font-size:14px;color:var(--text-secondary);line-height:1.7;margin-bottom:28px;}
+.how-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-md);padding:18px 20px;margin-bottom:14px;}
+.how-card-title{font-size:14px;font-weight:500;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+.how-card-body{font-size:13px;color:var(--text-secondary);line-height:1.65;}
+.how-badge{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;background:var(--teal-50);color:var(--teal-600);}
+.how-badge.amber{background:var(--amber-50);color:var(--amber-800);}
+.how-divider{border:none;border-top:1px solid var(--border);margin:24px 0;}
+.roadmap-row{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px;}
+.roadmap-num{width:24px;height:24px;border-radius:50%;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--text-secondary);flex-shrink:0;margin-top:1px;}
+.roadmap-text{font-size:13px;color:var(--text-secondary);line-height:1.6;}
+.roadmap-text strong{color:var(--text-primary);font-weight:500;}
+
+/* PAGE VIEWS */
+.page{display:none;}
+.page.active{display:flex;flex-direction:column;}
+#howTab{display:none;}
+#howTab.active{display:block;}
+
+@media(max-width:700px){
+  .sidebar{display:none;}
+  .main{padding:12px;}
+  .form-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- INTAKE MODAL -->
+<div class="modal-overlay" id="intakeModal">
+  <div class="modal">
+    <div class="modal-logo">CareDesk</div>
+    <div class="modal-sub">Please tell us a little about yourself before we begin.</div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">First name *</label>
+        <input class="form-input" id="intakeFirst" type="text" placeholder="Jane" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Last name</label>
+        <input class="form-input" id="intakeLast" type="text" placeholder="Smith" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">Patient type *</label>
+        <select class="form-input" id="intakePatientType">
+          <option value="">Select…</option>
+          <option value="new">New patient</option>
+          <option value="returning">Returning patient</option>
+          <option value="caregiver">Caregiver / parent</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Practice type</label>
+        <select class="form-input" id="intakePractice">
+          <option value="dental">Dental Practice</option>
+          <option value="gp">General Practice (GP)</option>
+          <option value="physio">Physiotherapy</option>
+          <option value="pediatric">Pediatric Clinic</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">Main reason for today's visit *</label>
+      <select class="form-input" id="intakeReason">
+        <option value="">Select…</option>
+        <option value="Book or reschedule an appointment">Book or reschedule an appointment</option>
+        <option value="Ask about a symptom or condition">Ask about a symptom or condition</option>
+        <option value="Get pre-visit preparation info">Get pre-visit preparation info</option>
+        <option value="Ask about billing or insurance">Ask about billing or insurance</option>
+        <option value="Get after-care instructions">Get after-care instructions</option>
+        <option value="Something else">Something else</option>
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label class="form-label">Anything specific you'd like help with? <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+      <input class="form-input" id="intakeNote" type="text" placeholder="e.g. wisdom tooth pain since yesterday" />
+    </div>
+
+    <button class="start-btn" onclick="startChat()">Start conversation →</button>
+    <div class="intake-note">Your responses help us give better answers. No account needed.</div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">
+    <span class="logo-mark">CareDesk</span>
+    <span class="logo-tag">AI Front-Desk</span>
+  </div>
+  <div class="topbar-right">
+    <select class="practice-select" id="practiceType" onchange="changePractice()">
+      <option value="dental">Dental Practice</option>
+      <option value="gp">General Practice (GP)</option>
+      <option value="physio">Physiotherapy</option>
+      <option value="pediatric">Pediatric Clinic</option>
+    </select>
+    <div class="status-pill"><span class="status-dot"></span>Online</div>
+  </div>
+</div>
+
+<!-- NAV TABS -->
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="showTab('chat')">💬 Assistant</button>
+  <button class="nav-tab" onclick="showTab('summary')" id="summaryTabBtn">📋 Visit Summary</button>
+  <button class="nav-tab" onclick="showTab('how')" >⚙️ How it works</button>
+</div>
+
+<!-- CHAT TAB -->
+<div class="page active" id="chatTab">
+  <div class="main">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="panel">
+        <div class="panel-title">Quick prompts</div>
+        <button class="qp-btn" onclick="sendQuick('What are your clinic hours and how do I book an appointment?')">📅 Book an appointment</button>
+        <button class="qp-btn" onclick="sendQuick('I have a toothache, what should I do?')">🦷 Dental pain advice</button>
+        <button class="qp-btn" onclick="sendQuick('What should I bring to my first visit?')">📋 New patient prep</button>
+        <button class="qp-btn" onclick="sendQuick('Do you accept insurance or offer payment plans?')">💳 Insurance & billing</button>
+        <button class="qp-btn" onclick="sendQuick('I need to cancel and reschedule my appointment.')">🔄 Reschedule visit</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Capabilities</div>
+        <div class="cap-item"><span class="cap-dot on"></span>Appointment booking info</div>
+        <div class="cap-item"><span class="cap-dot on"></span>Pre-visit preparation</div>
+        <div class="cap-item"><span class="cap-dot on"></span>Symptom triage guidance</div>
+        <div class="cap-item"><span class="cap-dot on"></span>Insurance & billing FAQs</div>
+        <div class="cap-item"><span class="cap-dot on"></span>After-care instructions</div>
+        <div class="cap-item"><span class="cap-dot off"></span>Prescriptions (escalated)</div>
+        <div class="cap-item"><span class="cap-dot off"></span>Diagnosis (escalated)</div>
+      </div>
+
+      <div class="panel" id="escalationPanel">
+        <div class="panel-title">
+          Escalation log
+          <span class="esc-badge" id="escCount" style="display:none">0</span>
+        </div>
+        <div id="escalationList"><div class="esc-empty">No escalations this session.</div></div>
+      </div>
+
+      <div class="panel" style="background:var(--teal-50);border-color:var(--teal-100);">
+        <div style="font-size:12px;color:var(--teal-800);line-height:1.6;">
+          <strong style="display:block;margin-bottom:3px;font-size:12px;">For emergencies</strong>
+          Call <strong>911</strong> or go to your nearest ER. This assistant does not handle emergencies.
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat window -->
+    <div class="chat-area">
+      <div class="chat-window">
+        <div class="chat-header">
+          <div class="bot-avatar" id="botEmoji">🦷</div>
+          <div>
+            <div class="bot-name" id="botName">Dental Practice Assistant</div>
+            <div class="bot-desc">Powered by Claude · Not a substitute for professional advice</div>
+          </div>
+          <button class="clear-btn" onclick="clearChat()">New session</button>
+        </div>
+
+        <div class="api-banner" id="apiBanner">
+          <span>🔑</span>
+          <span style="white-space:nowrap;font-size:12px;">Anthropic API key:</span>
+          <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off" />
+          <button onclick="saveKey()">Save</button>
+        </div>
+
+        <div class="messages" id="messages"></div>
+
+        <div class="chat-footer">Responses are informational only · Always consult a healthcare professional</div>
+
+        <div class="input-area">
+          <textarea id="userInput" placeholder="Ask about appointments, symptoms, billing…" rows="1"
+            onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUMMARY TAB -->
+<div class="page" id="summaryTab">
+  <div class="main" style="justify-content:center;">
+    <div style="width:100%;max-width:580px;">
+      <div class="summary-panel" id="summaryContent">
+        <div class="summary-generating">
+          <div style="font-size:28px;margin-bottom:10px;">📋</div>
+          Complete a conversation first, then return here to generate your visit summary.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS TAB -->
+<div id="howTab">
+  <div class="how-section" style="margin:0 auto;">
+    <div class="how-h2">How CareDesk works</div>
+    <div class="how-lead">CareDesk is an AI-powered front-desk assistant for small health practices. It handles routine patient questions so your staff can focus on care — not call volume.</div>
+
+    <div class="how-card">
+      <div class="how-card-title">🧩 System prompt as configuration <span class="how-badge">Architecture</span></div>
+      <div class="how-card-body">Each practice type (dental, GP, physio, pediatric) runs on a different system prompt. Swapping the clinical context takes minutes. No retraining, no new model — just a different instruction set. This is the core of how the product stays flexible across verticals.</div>
+    </div>
+
+    <div class="how-card">
+      <div class="how-card-title">📋 Intake-first conversation design <span class="how-badge">Product</span></div>
+      <div class="how-card-body">Before the chat starts, the patient provides their name, visit type, and reason. This pre-populates the first message to Claude, giving the model context without requiring the patient to repeat themselves. Better inputs → better outputs from message one.</div>
+    </div>
+
+    <div class="how-card">
+      <div class="how-card-title">⚠️ Escalation detection <span class="how-badge amber">Safety</span></div>
+      <div class="how-card-body">Every bot response is scanned for clinical trigger words (diagnosis, prescription, severe pain, emergency, 911, difficulty breathing). When detected, the message is flagged in the sidebar escalation log and a visual indicator is shown to the patient. This creates an auditable trail for the clinic — and keeps the AI's lane clearly defined.</div>
+    </div>
+
+    <div class="how-card">
+      <div class="how-card-title">📤 Structured handoff summary <span class="how-badge">Workflow</span></div>
+      <div class="how-card-body">At the end of every session, CareDesk generates a structured summary: patient name, visit type, topics discussed, and any escalation flags. The clinic receives this via email (in production: integrated into the PMS). This closes the loop between AI-assisted intake and human-led care.</div>
+    </div>
+
+    <hr class="how-divider" />
+
+    <div style="font-size:13px;font-weight:500;color:var(--text-secondary);margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em;">Production roadmap</div>
+
+    <div class="roadmap-row"><div class="roadmap-num">1</div><div class="roadmap-text"><strong>Backend API proxy</strong> — move the API key server-side so it's never exposed in the browser.</div></div>
+    <div class="roadmap-row"><div class="roadmap-num">2</div><div class="roadmap-text"><strong>Scheduling API integration</strong> — connect to Jane App, Calendly, or the clinic's PMS so patients can actually book, not just ask about booking.</div></div>
+    <div class="roadmap-row"><div class="roadmap-num">3</div><div class="roadmap-text"><strong>Auth + patient history</strong> — returning patients get context-aware responses based on their record (read-only EHR access).</div></div>
+    <div class="roadmap-row"><div class="roadmap-num">4</div><div class="roadmap-text"><strong>Escalation workflow</strong> — flagged conversations routed to a staff dashboard with one-click callback or SMS to patient.</div></div>
+    <div class="roadmap-row"><div class="roadmap-num">5</div><div class="roadmap-text"><strong>Analytics layer</strong> — track top questions by practice type, escalation rate, session resolution rate. Feed back into prompt improvement.</div></div>
+  </div>
+</div>
+
+<script>
+const PRACTICES = {
+  dental:{name:"Dental Practice Assistant",emoji:"🦷",system:`You are a warm, professional front-desk AI assistant for a small dental practice in the US. Help patients with: booking/rescheduling appointments, explaining procedures (cleanings, fillings, extractions, whitening, orthodontics), new patient onboarding (what to bring, insurance, forms), billing and insurance questions (PPO accepted, payment plans available), post-procedure care, general oral health advice. Office hours: Mon–Fri 8am–6pm, Sat 9am–2pm. Be reassuring — many patients have dental anxiety. RULES: 1) Never diagnose. 2) For severe pain, swelling, difficulty swallowing/breathing — say call office immediately or go to ER. 3) No prescription or dosage advice. 4) For clinical judgment questions say "I'd recommend speaking with Dr. [Name] — I can book a consultation." 5) Keep responses concise. 6) End with an offer to help or book.`},
+  gp:{name:"General Practice Assistant",emoji:"🩺",system:`You are a friendly, professional front-desk AI assistant for a small GP clinic in the US. Help patients with: scheduling (checkups, sick visits, follow-ups), new patient registration, insurance and referral questions, general wellness info, common procedures and tests, prescription refill request process (not refills themselves), clinic hours. RULES: 1) Never diagnose or interpret results. 2) For chest pain, breathing difficulty, stroke symptoms, severe allergic reaction — say "Call 911 or go to ER immediately." 3) No medication changes or dosages. 4) Clinical questions: "Your physician would be best placed to advise — shall I book an appointment?" 5) Avoid jargon.`},
+  physio:{name:"Physiotherapy Assistant",emoji:"🏃",system:`You are a warm, knowledgeable front-desk AI assistant for a physiotherapy clinic in the US. Help clients with: booking assessments and follow-up sessions, explaining what to expect (assessment, treatment plan, exercise programs), common conditions treated (back pain, sports injuries, post-surgical rehab, joint issues), insurance and direct billing, general home exercise guidance (not patient-specific), clinic hours and location. Be encouraging — many clients are in pain. RULES: 1) Never prescribe specific exercises for a condition without a physio assessment. 2) Acute injuries with severe swelling, inability to bear weight, suspected fracture — recommend urgent care or ER. 3) No medication or surgical advice. 4) Clinical questions: "Your physiotherapist will assess that in your first session — shall I help you book?"`},
+  pediatric:{name:"Pediatric Clinic Assistant",emoji:"👶",system:`You are a friendly, reassuring front-desk AI assistant for a pediatric clinic in the US. You mainly speak with parents and guardians. Help with: booking well-child visits, sick visits, and follow-ups; vaccination schedules; new patient family onboarding; insurance and billing; general child health and development info; preparing families for visits; clinic hours and after-hours guidance. Be warm and patient. RULES: 1) Never diagnose children's conditions. 2) High fever in infants under 3 months, difficulty breathing, seizures, severe rash, loss of consciousness — say "Call 911 or go to ER immediately." 3) No medication dosages for children. 4) Clinical questions: "The pediatrician would want to assess that directly — I can book an urgent appointment if needed." 5) Use simple, jargon-free language.`}
+};
+
+const ESC_KEYWORDS = ['diagnos','prescri','medication','dosage','emergency','911','ER','urgent','severe pain','difficulty breathing','cannot breathe','swelling','seizure','unconscious','fracture','call the office immediately'];
+
+let currentPractice = 'dental';
+let conversationHistory = [];
+let apiKey = '';
+let isLoading = false;
+let escalations = [];
+let patientInfo = {};
+let msgCount = 0;
+
+// ── INTAKE ──
+function startChat() {
+  const first = document.getElementById('intakeFirst').value.trim();
+  const patientType = document.getElementById('intakePatientType').value;
+  const reason = document.getElementById('intakeReason').value;
+  if (!first || !patientType || !reason) {
+    ['intakeFirst','intakePatientType','intakeReason'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el.value.trim() && !el.value) el.style.borderColor = '#E24B4A';
+      else el.style.borderColor = '';
+    });
+    return;
+  }
+  const last = document.getElementById('intakeLast').value.trim();
+  const note = document.getElementById('intakeNote').value.trim();
+  currentPractice = document.getElementById('intakePractice').value;
+  patientInfo = { first, last, patientType, reason, note };
+  document.getElementById('practiceType').value = currentPractice;
+  updateBotHeader();
+  document.getElementById('intakeModal').style.display = 'none';
+  initChat();
+}
+
+function initChat() {
+  const p = patientInfo;
+  const greeting = `Hi ${p.first}! Welcome${p.patientType === 'returning' ? ' back' : ''} to our ${PRACTICES[currentPractice].name.replace(' Assistant','')}.`;
+  const context = `I can see you're here to: "${p.reason}"${p.note ? ` — specifically: "${p.note}"` : ''}. Let me help you with that right away.`;
+  const firstMsg = `${greeting} ${context}`;
+
+  conversationHistory = [{
+    role: 'user',
+    content: `My name is ${p.first} ${p.last}. I am a ${p.patientType} patient. My main reason for contacting you today is: ${p.reason}${p.note ? `. Additional context: ${p.note}` : ''}. Please greet me and help me.`
+  }];
+
+  if (apiKey) {
+    callClaude(firstMsg, true);
+  } else {
+    addBotMessage(firstMsg);
+    conversationHistory.push({ role: 'assistant', content: firstMsg });
+  }
+}
+
+// ── TABS ──
+function showTab(tab) {
+  document.querySelectorAll('.nav-tab').forEach((t,i) => t.classList.toggle('active', ['chat','summary','how'][i] === tab));
+  document.getElementById('chatTab').classList.toggle('active', tab === 'chat');
+  document.getElementById('summaryTab').classList.toggle('active', tab === 'summary');
+  document.getElementById('howTab').classList.toggle('active', tab === 'how');
+  if (tab === 'summary') generateSummary();
+}
+
+// ── PRACTICE ──
+function changePractice() {
+  currentPractice = document.getElementById('practiceType').value;
+  updateBotHeader();
+  conversationHistory = [];
+  clearChat(true);
+}
+
+function updateBotHeader() {
+  const c = PRACTICES[currentPractice];
+  document.getElementById('botName').textContent = c.name;
+  document.getElementById('botEmoji').textContent = c.emoji;
+}
+
+// ── API KEY ──
+function saveKey() {
+  const val = document.getElementById('apiKeyInput').value.trim();
+  if (val.startsWith('sk-')) {
+    apiKey = val;
+    document.getElementById('apiBanner').style.display = 'none';
+  } else {
+    document.getElementById('apiKeyInput').style.borderColor = '#E24B4A';
+    setTimeout(() => document.getElementById('apiKeyInput').style.borderColor = '', 1500);
+  }
+}
+
+// ── MESSAGING ──
+function addBotMessage(text, flagged = false) {
+  const msgs = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = 'msg-row bot';
+  const emoji = PRACTICES[currentPractice].emoji;
+  const tag = flagged
+    ? '<span class="disclaimer-tag flagged">⚠️ Escalated · Informational only</span>'
+    : '<span class="disclaimer-tag">General information · Not medical advice</span>';
+  row.innerHTML = `
+    <div class="msg-icon bot">${emoji}</div>
+    <div>
+      <div class="bubble bot">${formatText(text)}</div>
+      <div class="msg-meta">${tag}</div>
+    </div>`;
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addUserMessage(text) {
+  const msgs = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = 'msg-row user';
+  row.innerHTML = `<div class="msg-icon user">👤</div><div class="bubble user">${escHtml(text)}</div>`;
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addTyping() {
+  const msgs = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.id = 'typing'; row.className = 'msg-row bot';
+  row.innerHTML = `<div class="msg-icon bot">${PRACTICES[currentPractice].emoji}</div><div class="bubble bot typing"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTyping() { const el = document.getElementById('typing'); if (el) el.remove(); }
+
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text || isLoading) return;
+  if (!apiKey) { flashBanner(); return; }
+  input.value = ''; input.style.height = 'auto';
+  isLoading = true;
+  document.getElementById('sendBtn').disabled = true;
+  addUserMessage(text);
+  conversationHistory.push({ role: 'user', content: text });
+  addTyping();
+  await callClaude();
+  isLoading = false;
+  document.getElementById('sendBtn').disabled = false;
+  input.focus();
+}
+
+async function callClaude(fallbackMsg, skipHistory = false) {
+  try {
+    const messages = skipHistory
+      ? [{ role: 'user', content: conversationHistory[0].content }]
+      : conversationHistory;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 600,
+        system: PRACTICES[currentPractice].system,
+        messages
+      })
+    });
+    const data = await res.json();
+    removeTyping();
+    if (data.error) { addBotMessage(`Error: ${data.error.message}`); return; }
+    const reply = data.content?.[0]?.text || 'Sorry, no response received. Please try again.';
+    conversationHistory.push({ role: 'assistant', content: reply });
+    const flagged = checkEscalation(reply);
+    addBotMessage(reply, flagged);
+    msgCount++;
+  } catch(e) {
+    removeTyping();
+    if (fallbackMsg) addBotMessage(fallbackMsg);
+    else addBotMessage('Connection error. Please check your API key and internet connection.');
+  }
+}
+
+function checkEscalation(text) {
+  const lower = text.toLowerCase();
+  const triggered = ESC_KEYWORDS.filter(k => lower.includes(k));
+  if (triggered.length === 0) return false;
+  const item = { time: new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}), keywords: triggered, snippet: text.slice(0,90)+'…' };
+  escalations.push(item);
+  updateEscalationLog();
+  return true;
+}
+
+function updateEscalationLog() {
+  const list = document.getElementById('escalationList');
+  const badge = document.getElementById('escCount');
+  badge.textContent = escalations.length;
+  badge.style.display = 'inline-flex';
+  list.innerHTML = escalations.map(e => `
+    <div class="esc-item">
+      "${e.snippet}"
+      <div class="esc-item-time">${e.time} · keywords: ${e.keywords.slice(0,2).join(', ')}</div>
+    </div>`).join('');
+}
+
+// ── SUMMARY ──
+async function generateSummary() {
+  const panel = document.getElementById('summaryContent');
+  if (conversationHistory.length < 2) {
+    panel.innerHTML = '<div class="summary-generating"><div style="font-size:28px;margin-bottom:10px;">📋</div>Complete a conversation first, then return here to generate your visit summary.</div>';
+    return;
+  }
+
+  panel.innerHTML = '<div class="summary-generating"><div style="font-size:28px;margin-bottom:10px;">⏳</div>Generating summary…</div>';
+
+  const topics = extractTopics();
+  const name = patientInfo.first ? `${patientInfo.first} ${patientInfo.last || ''}`.trim() : 'Patient';
+
+  const flagHtml = escalations.length > 0
+    ? escalations.map(e => `<div class="summary-flag">⚠️ <strong>Escalation flagged at ${e.time}:</strong> ${e.snippet}</div>`).join('')
+    : '<div style="font-size:13px;color:var(--text-muted);">No escalations this session.</div>';
+
+  panel.innerHTML = `
+    <div class="summary-header">
+      <div>
+        <div class="summary-title">Visit Summary</div>
+        <div class="summary-sub">Generated ${new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} · ${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+      </div>
+    </div>
+    <div class="summary-body">
+      <div class="summary-section">
+        <div class="summary-section-title">Patient details</div>
+        <div class="summary-info-row"><span class="summary-info-label">Name</span><span class="summary-info-val">${escHtml(name)}</span></div>
+        <div class="summary-info-row"><span class="summary-info-label">Patient type</span><span class="summary-info-val">${capitalize(patientInfo.patientType || 'Unknown')}</span></div>
+        <div class="summary-info-row"><span class="summary-info-label">Practice</span><span class="summary-info-val">${PRACTICES[currentPractice].name.replace(' Assistant','')}</span></div>
+        <div class="summary-info-row"><span class="summary-info-label">Reason for visit</span><span class="summary-info-val">${escHtml(patientInfo.reason || 'Not provided')}</span></div>
+        <div class="summary-info-row"><span class="summary-info-label">Messages exchanged</span><span class="summary-info-val">${msgCount}</span></div>
+        <div class="summary-info-row"><span class="summary-info-label">Escalations</span><span class="summary-info-val" style="color:${escalations.length > 0 ? '#854F0B' : 'inherit'}">${escalations.length}</span></div>
+      </div>
+
+      <div class="summary-section">
+        <div class="summary-section-title">Topics discussed</div>
+        <div class="summary-topics">${topics.map(t => `<span class="topic-tag">${t}</span>`).join('')}</div>
+      </div>
+
+      ${escalations.length > 0 ? `<div class="summary-section"><div class="summary-section-title">Escalation flags</div>${flagHtml}</div>` : ''}
+
+      <button class="handoff-btn" onclick="sendHandoff()">📤 Send summary to clinic</button>
+      <button class="handoff-btn secondary" onclick="window.print()">🖨️ Print / save as PDF</button>
+    </div>`;
+}
+
+function extractTopics() {
+  const all = conversationHistory.map(m => m.content).join(' ').toLowerCase();
+  const topicMap = [
+    ['Appointment booking', ['book','appointment','schedule','slot','availability']],
+    ['Rescheduling', ['reschedule','cancel','change my appointment']],
+    ['Billing & insurance', ['insurance','billing','payment','cost','plan','ppo']],
+    ['Symptom / pain', ['pain','ache','hurt','symptom','discomfort','swelling']],
+    ['New patient prep', ['first visit','new patient','what to bring','forms']],
+    ['After-care', ['after care','aftercare','recovery','post','instructions']],
+    ['General health info', ['how long','what is','explain','tell me about']],
+  ];
+  return topicMap.filter(([,kws]) => kws.some(k => all.includes(k))).map(([label]) => label);
+}
+
+function sendHandoff() {
+  const name = patientInfo.first ? `${patientInfo.first} ${patientInfo.last || ''}`.trim() : 'Patient';
+  const subject = `CareDesk Summary: ${name} · ${new Date().toLocaleDateString()}`;
+  const body = `Patient: ${name}\nType: ${capitalize(patientInfo.patientType||'')}\nReason: ${patientInfo.reason||''}\nEscalations: ${escalations.length}\n\nPlease review the attached session.`;
+  window.location.href = `mailto:clinic@example.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+// ── UTILS ──
+function sendQuick(text) { document.getElementById('userInput').value = text; sendMessage(); }
+
+function clearChat(silent = false) {
+  document.getElementById('messages').innerHTML = '';
+  conversationHistory = [];
+  escalations = [];
+  msgCount = 0;
+  document.getElementById('escalationList').innerHTML = '<div class="esc-empty">No escalations this session.</div>';
+  document.getElementById('escCount').style.display = 'none';
+  if (!silent) {
+    const c = PRACTICES[currentPractice];
+    addBotMessage(`Hi there! I'm the ${c.name}. I can help with appointments, billing, visit prep, and general health questions. How can I help you today?`);
+  }
+}
+
+function handleKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight,110)+'px'; }
+function formatText(t) { return escHtml(t).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>'); }
+function escHtml(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function capitalize(s) { return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
+function flashBanner() {
+  const b = document.getElementById('apiBanner');
+  b.style.border = '1.5px solid #E24B4A';
+  document.getElementById('apiKeyInput').focus();
+  setTimeout(() => b.style.border = '1px solid var(--amber-100)', 1500);
+}
+</script>
+</body>
+</html>
