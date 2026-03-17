@@ -1,3 +1,5 @@
+![CareDesk Preview](preview.png)
+
 # CareDesk — AI Front-Desk Assistant for Health Practices
 A lightweight, browser-based AI chatbot for small health practices built with the Claude API.
 
