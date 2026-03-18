@@ -1,0 +1,134 @@
+{
+  "dental": {
+    "name": "Sunrise Dental Practice",
+    "emoji": "🦷",
+    "hours": {
+      "monday": "8:00 AM – 6:00 PM",
+      "tuesday": "8:00 AM – 6:00 PM",
+      "wednesday": "8:00 AM – 6:00 PM",
+      "thursday": "8:00 AM – 6:00 PM",
+      "friday": "8:00 AM – 6:00 PM",
+      "saturday": "9:00 AM – 2:00 PM",
+      "sunday": "Closed"
+    },
+    "location": "123 Main St, Suite 200, Austin, TX 78701",
+    "phone": "(512) 555-0101",
+    "email": "hello@sunrisedental.com",
+    "services": [
+      "Routine cleanings & exams",
+      "Fillings & restorations",
+      "Tooth extractions",
+      "Root canal therapy",
+      "Teeth whitening",
+      "Orthodontics (braces & clear aligners)",
+      "Emergency dental care"
+    ],
+    "insurance": "We accept most PPO plans including Delta Dental, Cigna, Aetna, and MetLife. Payment plans available.",
+    "new_patient": "Please bring a valid photo ID, insurance card, and list of current medications. Arrive 15 minutes early to complete paperwork.",
+    "faq": {
+      "how to book": "Call us at (512) 555-0101 or book online. Same-day emergency slots available.",
+      "cancellation": "Please cancel at least 24 hours in advance to avoid a $50 fee.",
+      "parking": "Free parking in the building garage on 2nd and 3rd floors.",
+      "kids": "We see patients of all ages from 3 years and up."
+    }
+  },
+  "gp": {
+    "name": "Westside Family Clinic",
+    "emoji": "🩺",
+    "hours": {
+      "monday": "8:00 AM – 5:00 PM",
+      "tuesday": "8:00 AM – 5:00 PM",
+      "wednesday": "8:00 AM – 5:00 PM",
+      "thursday": "8:00 AM – 7:00 PM",
+      "friday": "8:00 AM – 4:00 PM",
+      "saturday": "9:00 AM – 1:00 PM",
+      "sunday": "Closed"
+    },
+    "location": "456 Oak Avenue, Austin, TX 78702",
+    "phone": "(512) 555-0202",
+    "email": "care@westsideclinic.com",
+    "services": [
+      "Annual wellness exams",
+      "Sick visits (same-day available)",
+      "Chronic disease management",
+      "Vaccinations & immunizations",
+      "Lab work & referrals",
+      "Prescription refill requests",
+      "Telehealth appointments"
+    ],
+    "insurance": "We accept Medicare, Medicaid, and most major PPO/HMO plans. Sliding scale fees for uninsured patients.",
+    "new_patient": "Bring photo ID, insurance card, medication list, and prior medical records if available. New patient forms can be completed online.",
+    "faq": {
+      "prescription refills": "Submit refill requests via the patient portal or call 48 hours before you run out. We do not refill controlled substances by phone.",
+      "lab results": "Results are available in the patient portal within 3–5 business days.",
+      "referrals": "Referrals are processed within 2 business days and sent directly to the specialist.",
+      "telehealth": "Video visits available Mon–Thu for non-urgent concerns. Book through the portal."
+    }
+  },
+  "physio": {
+    "name": "ActiveEdge Physiotherapy",
+    "emoji": "🏃",
+    "hours": {
+      "monday": "7:00 AM – 7:00 PM",
+      "tuesday": "7:00 AM – 7:00 PM",
+      "wednesday": "7:00 AM – 7:00 PM",
+      "thursday": "7:00 AM – 7:00 PM",
+      "friday": "7:00 AM – 5:00 PM",
+      "saturday": "8:00 AM – 2:00 PM",
+      "sunday": "Closed"
+    },
+    "location": "789 Fitness Blvd, Suite 110, Austin, TX 78703",
+    "phone": "(512) 555-0303",
+    "email": "book@activeedgephysio.com",
+    "services": [
+      "Initial assessment & treatment planning",
+      "Manual therapy & joint mobilisation",
+      "Sports injury rehabilitation",
+      "Post-surgical rehab",
+      "Back & neck pain treatment",
+      "Exercise prescription & home programs",
+      "Dry needling"
+    ],
+    "insurance": "We direct-bill most major insurers. Workers' compensation and motor vehicle accident claims accepted.",
+    "new_patient": "Wear comfortable clothing. Bring any imaging (X-rays, MRI reports) and your referral letter if applicable. Assessment takes 60 minutes.",
+    "faq": {
+      "how many sessions": "Depends on your condition. Your physio will outline a plan at the first session — typically 4–12 sessions.",
+      "what to expect": "Initial session includes full assessment. Subsequent sessions are 30–45 minutes of targeted treatment.",
+      "home exercises": "Your physio will provide a customised program. Do not follow generic exercises before your assessment.",
+      "cancellation": "24-hour notice required. Late cancellations incur a $40 fee."
+    }
+  },
+  "pediatric": {
+    "name": "Sunshine Pediatric Clinic",
+    "emoji": "👶",
+    "hours": {
+      "monday": "8:00 AM – 5:00 PM",
+      "tuesday": "8:00 AM – 5:00 PM",
+      "wednesday": "8:00 AM – 5:00 PM",
+      "thursday": "8:00 AM – 6:00 PM",
+      "friday": "8:00 AM – 4:00 PM",
+      "saturday": "9:00 AM – 12:00 PM",
+      "sunday": "Closed"
+    },
+    "location": "321 Sunshine Lane, Austin, TX 78704",
+    "phone": "(512) 555-0404",
+    "email": "care@sunshinepediatrics.com",
+    "services": [
+      "Well-child visits (newborn through age 18)",
+      "Sick visits",
+      "Vaccinations (full CDC schedule)",
+      "Developmental screenings",
+      "ADHD & behavioural assessments",
+      "Sports physicals",
+      "After-hours nurse line"
+    ],
+    "insurance": "We accept CHIP, Medicaid, and all major private insurance plans.",
+    "new_patient": "Bring the child's immunisation records, insurance card, and a photo ID for the parent or guardian. Our new patient packet can be completed online.",
+    "faq": {
+      "vaccines": "We follow the full CDC immunisation schedule. We do not accept vaccine-hesitant families as it puts other patients at risk.",
+      "sick visits": "Same-day sick appointments available Mon–Fri. Call at 8 AM for the day's slots.",
+      "fever guidelines": "Infants under 3 months with any fever (≥100.4°F) should go to the ER immediately. Older children: call us if over 104°F or lasting more than 3 days.",
+      "after hours": "Our after-hours nurse line is available 5 PM – 10 PM Mon–Fri and 12 PM – 6 PM weekends."
+    }
+  }
+}

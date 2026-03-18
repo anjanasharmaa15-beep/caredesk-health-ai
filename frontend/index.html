@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CareDesk — AI Front-Desk Agent</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --teal-50:#E1F5EE;--teal-100:#9FE1CB;--teal-200:#5DCAA5;
+  --teal-400:#1D9E75;--teal-600:#0F6E56;--teal-800:#085041;
+  --amber-50:#FAEEDA;--amber-100:#FAC775;--amber-800:#633806;
+  --gray-50:#F7F6F3;--gray-100:#EDEDEA;--gray-200:#D3D1C7;
+  --gray-400:#888780;--gray-600:#5F5E5A;--gray-800:#2C2C2A;
+  --white:#FFFFFF;
+  --text-primary:#1A1A18;--text-secondary:#5F5E5A;--text-muted:#9C9B96;
+  --border:rgba(0,0,0,0.08);
+  --radius-sm:8px;--radius-md:12px;--radius-lg:16px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--gray-50);min-height:100vh;display:flex;flex-direction:column;color:var(--text-primary);}
+
+/* TOPBAR */
+.topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:baseline;gap:6px;}
+.logo-mark{font-family:'Instrument Serif',serif;font-size:21px;color:var(--teal-600);letter-spacing:-0.3px;}
+.logo-tag{font-size:11px;font-weight:500;color:var(--text-muted);letter-spacing:.05em;text-transform:uppercase;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.practice-select{font-family:'DM Sans',sans-serif;font-size:13px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;background:var(--gray-50);color:var(--text-primary);cursor:pointer;outline:none;}
+.practice-select:focus{border-color:var(--teal-400);}
+.status-pill{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--teal-600);background:var(--teal-50);padding:4px 10px;border-radius:20px;font-weight:500;}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--teal-400);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* NAV TABS */
+.nav-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--white);padding:0 28px;}
+.nav-tab{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:12px 16px;border:none;background:none;cursor:pointer;color:var(--text-muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;}
+.nav-tab:hover{color:var(--text-secondary);}
+.nav-tab.active{color:var(--teal-600);border-bottom-color:var(--teal-600);}
+
+/* LAYOUT */
+.main{flex:1;display:flex;gap:18px;max-width:1120px;width:100%;margin:0 auto;padding:24px;align-items:flex-start;}
+.sidebar{width:230px;flex-shrink:0;display:flex;flex-direction:column;gap:14px;}
+.chat-area{flex:1;display:flex;flex-direction:column;min-width:0;}
+
+/* PANELS */
+.panel{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px;}
+.panel-title{font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;}
+
+/* QUICK PROMPTS */
+.qp-btn{display:block;width:100%;text-align:left;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-secondary);padding:8px 10px;border-radius:var(--radius-sm);border:1px solid transparent;background:transparent;cursor:pointer;transition:all .15s;line-height:1.4;margin-bottom:2px;}
+.qp-btn:hover{background:var(--teal-50);color:var(--teal-800);border-color:var(--teal-100);}
+
+/* CAPABILITIES */
+.cap-item{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--text-secondary);line-height:1.4;margin-bottom:7px;}
+.cap-dot{width:6px;height:6px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+.cap-dot.on{background:var(--teal-400);}
+.cap-dot.off{background:var(--gray-200);}
+
+/* ESCALATION LOG */
+.esc-empty{font-size:12px;color:var(--text-muted);font-style:italic;}
+.esc-item{background:var(--amber-50);border:1px solid var(--amber-100);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:8px;font-size:12px;color:var(--amber-800);line-height:1.5;}
+.esc-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--amber-100);color:var(--amber-800);font-size:10px;font-weight:500;border-radius:20px;padding:2px 7px;margin-left:6px;}
+
+/* CHAT WINDOW */
+.chat-window{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;}
+.chat-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--white);}
+.bot-avatar{width:36px;height:36px;border-radius:50%;background:var(--teal-50);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.bot-name{font-size:14px;font-weight:500;}
+.bot-desc{font-size:11px;color:var(--text-muted);margin-top:1px;}
+.clear-btn{margin-left:auto;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--text-muted);background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 12px;cursor:pointer;transition:all .15s;}
+.clear-btn:hover{color:var(--text-secondary);border-color:var(--gray-200);}
+
+.messages{overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:14px;min-height:320px;max-height:400px;scroll-behavior:smooth;}
+.msg-row{display:flex;gap:10px;align-items:flex-start;}
+.msg-row.user{flex-direction:row-reverse;}
+.msg-icon{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;}
+.msg-icon.bot{background:var(--teal-50);}
+.msg-icon.user{background:var(--gray-100);}
+.bubble{max-width:74%;padding:10px 13px;border-radius:var(--radius-md);font-size:13.5px;line-height:1.65;}
+.bubble.bot{background:var(--gray-50);border:1px solid var(--border);color:var(--text-primary);border-radius:4px var(--radius-md) var(--radius-md) var(--radius-md);}
+.bubble.user{background:var(--teal-800);color:var(--white);border-radius:var(--radius-md) 4px var(--radius-md) var(--radius-md);}
+.msg-meta{font-size:11px;color:var(--text-muted);margin-top:4px;}
+.disclaimer-tag{font-size:10px;background:var(--gray-100);color:var(--text-muted);padding:2px 7px;border-radius:20px;}
+
+/* TOOL BADGE */
+.tool-badge-row{display:flex;flex-wrap:wrap;gap:6px;padding-left:38px;}
+.tool-badge{font-size:11px;background:var(--teal-50);color:var(--teal-800);border:1px solid var(--teal-100);border-radius:20px;padding:2px 9px;}
+
+/* TYPING */
+.bubble.typing{display:flex;gap:5px;align-items:center;padding:14px;}
+.typing-dot{width:6px;height:6px;border-radius:50%;background:var(--gray-200);animation:bounce 1.2s infinite;}
+.typing-dot:nth-child(2){animation-delay:.2s;}
+.typing-dot:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{0%,80%,100%{transform:translateY(0);}40%{transform:translateY(-5px);}}
+
+/* INPUT */
+.input-area{padding:12px 14px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end;}
+.input-area textarea{flex:1;font-family:'DM Sans',sans-serif;font-size:13.5px;border:1px solid var(--border);border-radius:var(--radius-md);padding:9px 13px;resize:none;min-height:40px;max-height:110px;line-height:1.5;color:var(--text-primary);background:var(--gray-50);outline:none;transition:border-color .15s;}
+.input-area textarea:focus{border-color:var(--teal-400);background:var(--white);}
+.input-area textarea::placeholder{color:var(--text-muted);}
+.send-btn{width:40px;height:40px;border-radius:50%;background:var(--teal-600);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,transform .1s;}
+.send-btn:hover{background:var(--teal-800);}
+.send-btn:active{transform:scale(.95);}
+.send-btn:disabled{background:var(--gray-200);cursor:not-allowed;}
+.send-btn svg{width:15px;height:15px;fill:white;}
+.chat-footer{padding:6px 14px 10px;font-size:11px;color:var(--text-muted);text-align:center;}
+
+/* INTAKE MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:200;}
+.modal{background:var(--white);border-radius:var(--radius-lg);padding:28px 28px 24px;width:420px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.12);}
+.modal-logo{font-family:'Instrument Serif',serif;font-size:20px;color:var(--teal-600);margin-bottom:4px;}
+.modal-sub{font-size:13px;color:var(--text-muted);margin-bottom:22px;}
+.form-field{margin-bottom:16px;}
+.form-label{font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px;}
+.form-input{width:100%;font-family:'DM Sans',sans-serif;font-size:13.5px;border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;background:var(--gray-50);color:var(--text-primary);outline:none;transition:border-color .15s;}
+.form-input:focus{border-color:var(--teal-400);background:var(--white);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.start-btn{width:100%;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;padding:11px;background:var(--teal-600);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;margin-top:6px;transition:background .15s;}
+.start-btn:hover{background:var(--teal-800);}
+.intake-note{font-size:11px;color:var(--text-muted);text-align:center;margin-top:10px;line-height:1.5;}
+
+/* SUMMARY */
+.page{display:none;}
+.page.active{display:flex;flex-direction:column;}
+#howTab{display:none;}
+#howTab.active{display:block;}
+.summary-panel{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);padding:0;overflow:hidden;}
+.summary-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.summary-title{font-size:15px;font-weight:500;}
+.summary-sub{font-size:12px;color:var(--text-muted);margin-top:2px;}
+.summary-body{padding:20px;}
+.summary-section{margin-bottom:18px;}
+.summary-section-title{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:8px;}
+.summary-info-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);}
+.summary-info-row:last-child{border-bottom:none;}
+.summary-info-label{color:var(--text-secondary);}
+.summary-info-val{font-weight:500;color:var(--text-primary);}
+.summary-topics{display:flex;flex-wrap:wrap;gap:6px;}
+.topic-tag{font-size:12px;background:var(--teal-50);color:var(--teal-800);border:1px solid var(--teal-100);border-radius:20px;padding:3px 10px;}
+.summary-flag{background:var(--amber-50);border:1px solid var(--amber-100);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--amber-800);line-height:1.5;margin-bottom:8px;}
+.handoff-btn{width:100%;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:10px;background:var(--teal-600);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;margin-top:4px;transition:background .15s;}
+.handoff-btn:hover{background:var(--teal-800);}
+.handoff-btn.secondary{background:transparent;color:var(--teal-600);border:1px solid var(--teal-200);margin-top:8px;}
+.handoff-btn.secondary:hover{background:var(--teal-50);}
+.summary-generating{text-align:center;padding:30px 20px;color:var(--text-muted);font-size:13px;}
+
+/* HOW IT WORKS */
+.how-section{padding:24px 28px;max-width:700px;}
+.how-h2{font-family:'Instrument Serif',serif;font-size:22px;color:var(--text-primary);margin-bottom:6px;}
+.how-lead{font-size:14px;color:var(--text-secondary);line-height:1.7;margin-bottom:28px;}
+.how-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-md);padding:18px 20px;margin-bottom:14px;}
+.how-card-title{font-size:14px;font-weight:500;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+.how-card-body{font-size:13px;color:var(--text-secondary);line-height:1.65;}
+.how-badge{font-size:10px;font-weight:500;padding:2px 8px;border-radius:20px;background:var(--teal-50);color:var(--teal-600);}
+.how-badge.amber{background:var(--amber-50);color:var(--amber-800);}
+.how-divider{border:none;border-top:1px solid var(--border);margin:24px 0;}
+
+@media(max-width:700px){
+  .sidebar{display:none;}
+  .main{padding:12px;}
+  .form-row{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- INTAKE MODAL -->
+<div class="modal-overlay" id="intakeModal">
+  <div class="modal">
+    <div class="modal-logo">CareDesk</div>
+    <div class="modal-sub">Tell us a little about yourself and we'll connect you with the right assistant.</div>
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">First name *</label>
+        <input class="form-input" id="intakeFirst" type="text" placeholder="Jane" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Last name</label>
+        <input class="form-input" id="intakeLast" type="text" placeholder="Smith" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">Patient type *</label>
+        <select class="form-input" id="intakePatientType">
+          <option value="">Select…</option>
+          <option value="new">New patient</option>
+          <option value="returning">Returning patient</option>
+          <option value="caregiver">Caregiver / parent</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Practice type</label>
+        <select class="form-input" id="intakePractice">
+          <option value="dental">Dental Practice</option>
+          <option value="gp">General Practice (GP)</option>
+          <option value="physio">Physiotherapy</option>
+          <option value="pediatric">Pediatric Clinic</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Main reason for today's visit *</label>
+      <select class="form-input" id="intakeReason">
+        <option value="">Select…</option>
+        <option value="Book or reschedule an appointment">Book or reschedule an appointment</option>
+        <option value="Ask about a symptom or condition">Ask about a symptom or condition</option>
+        <option value="Get pre-visit preparation info">Get pre-visit preparation info</option>
+        <option value="Ask about billing or insurance">Ask about billing or insurance</option>
+        <option value="Get after-care instructions">Get after-care instructions</option>
+        <option value="Something else">Something else</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Anything specific? <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+      <input class="form-input" id="intakeNote" type="text" placeholder="e.g. wisdom tooth pain since yesterday" />
+    </div>
+    <button class="start-btn" id="startBtn" onclick="startChat()">Start conversation →</button>
+    <div class="intake-note">Your responses help us give better answers. No account needed.</div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">
+    <span class="logo-mark">CareDesk</span>
+    <span class="logo-tag">AI Agent v2</span>
+  </div>
+  <div class="topbar-right">
+    <select class="practice-select" id="practiceType" onchange="changePractice()">
+      <option value="dental">Dental Practice</option>
+      <option value="gp">General Practice (GP)</option>
+      <option value="physio">Physiotherapy</option>
+      <option value="pediatric">Pediatric Clinic</option>
+    </select>
+    <div class="status-pill"><span class="status-dot"></span>Online</div>
+  </div>
+</div>
+
+<!-- NAV TABS -->
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="showTab('chat')">💬 Assistant</button>
+  <button class="nav-tab" onclick="showTab('summary')">📋 Visit Summary</button>
+  <button class="nav-tab" onclick="showTab('how')">⚙️ How it works</button>
+</div>
+
+<!-- CHAT TAB -->
+<div class="page active" id="chatTab">
+  <div class="main">
+    <div class="sidebar">
+      <div class="panel">
+        <div class="panel-title">Quick prompts</div>
+        <button class="qp-btn" onclick="sendQuick('What are your clinic hours and how do I book an appointment?')">📅 Book an appointment</button>
+        <button class="qp-btn" onclick="sendQuick('I have a toothache, what should I do?')">🦷 Dental pain advice</button>
+        <button class="qp-btn" onclick="sendQuick('What should I bring to my first visit?')">📋 New patient prep</button>
+        <button class="qp-btn" onclick="sendQuick('Do you accept insurance or offer payment plans?')">💳 Insurance & billing</button>
+        <button class="qp-btn" onclick="sendQuick('I need to cancel and reschedule my appointment.')">🔄 Reschedule visit</button>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Agent capabilities</div>
+        <div class="cap-item"><span class="cap-dot on"></span>Appointment availability</div>
+        <div class="cap-item"><span class="cap-dot on"></span>Real booking (Cal.com)</div>
+        <div class="cap-item"><span class="cap-dot on"></span>Clinic info lookup</div>
+        <div class="cap-item"><span class="cap-dot on"></span>Insurance & billing FAQs</div>
+        <div class="cap-item"><span class="cap-dot on"></span>Staff escalation</div>
+        <div class="cap-item"><span class="cap-dot on"></span>AI visit summary</div>
+        <div class="cap-item"><span class="cap-dot off"></span>Diagnosis (never)</div>
+      </div>
+      <div class="panel" id="escalationPanel">
+        <div class="panel-title">
+          Escalation log
+          <span class="esc-badge" id="escCount" style="display:none">0</span>
+        </div>
+        <div id="escalationList"><div class="esc-empty">No escalations this session.</div></div>
+      </div>
+      <div class="panel" style="background:var(--teal-50);border-color:var(--teal-100);">
+        <div style="font-size:12px;color:var(--teal-800);line-height:1.6;">
+          <strong style="display:block;margin-bottom:3px;">For emergencies</strong>
+          Call <strong>911</strong> or go to your nearest ER. This assistant does not handle emergencies.
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-area">
+      <div class="chat-window">
+        <div class="chat-header">
+          <div class="bot-avatar" id="botEmoji">🦷</div>
+          <div>
+            <div class="bot-name" id="botName">Dental Assistant (Cara)</div>
+            <div class="bot-desc">Powered by Claude · Agent with real tools · Not a substitute for professional advice</div>
+          </div>
+          <button class="clear-btn" onclick="clearChat()">New session</button>
+        </div>
+        <div class="messages" id="messages"></div>
+        <div class="chat-footer">Responses are informational only · Always consult a healthcare professional</div>
+        <div class="input-area">
+          <textarea id="userInput" placeholder="Ask about appointments, symptoms, billing…" rows="1"
+            onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+          <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUMMARY TAB -->
+<div class="page" id="summaryTab">
+  <div class="main" style="justify-content:center;">
+    <div style="width:100%;max-width:580px;">
+      <div class="summary-panel" id="summaryContent">
+        <div class="summary-generating">
+          <div style="font-size:28px;margin-bottom:10px;">📋</div>
+          Complete a conversation first, then return here to generate your visit summary.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS TAB -->
+<div id="howTab">
+  <div class="how-section" style="margin:0 auto;">
+    <div class="how-h2">How CareDesk Agent works</div>
+    <div class="how-lead">CareDesk v2 is a true AI agent — not just a chatbot. Claude reasons over your request, picks the right tool, executes it, and loops until it has a complete answer.</div>
+    <div class="how-card">
+      <div class="how-card-title">🔁 Agent loop <span class="how-badge">Architecture</span></div>
+      <div class="how-card-body">Every message runs through a tool-use loop: Claude decides which tool to call (clinic lookup, calendar, escalation, summary), executes it via the FastAPI backend, incorporates the result, and reasons again — until it reaches a final answer.</div>
+    </div>
+    <div class="how-card">
+      <div class="how-card-title">📅 Real scheduling <span class="how-badge">Cal.com</span></div>
+      <div class="how-card-body">When Cal.com is configured, the agent checks live availability and creates real bookings. Without it, a mock mode returns realistic demo slots — so the flow works end-to-end in development.</div>
+    </div>
+    <div class="how-card">
+      <div class="how-card-title">⚠️ Smart escalation <span class="how-badge amber">Safety</span></div>
+      <div class="how-card-body">Claude decides when to escalate — not keyword matching. It calls the escalate_to_staff tool with urgency levels (low → emergency), logs it in the sidebar, and can send email alerts via Resend for high-priority cases.</div>
+    </div>
+    <div class="how-card">
+      <div class="how-card-title">📋 AI-written summary <span class="how-badge">Workflow</span></div>
+      <div class="how-card-body">The visit summary is generated by Claude, not a template. It produces structured JSON (chief complaint, outcome, risk level, recommended follow-up) based on the full session context.</div>
+    </div>
+    <hr class="how-divider" />
+    <div style="font-size:13px;font-weight:500;color:var(--text-secondary);margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em;">Stack</div>
+    <div class="how-card-body" style="line-height:2;">
+      <strong>Backend:</strong> Python · FastAPI · Anthropic SDK<br>
+      <strong>Agent:</strong> Claude claude-sonnet-4-6 with 5 tools<br>
+      <strong>Scheduling:</strong> Cal.com REST API v2<br>
+      <strong>Email:</strong> Resend<br>
+      <strong>Frontend:</strong> Vanilla JS · served by FastAPI
+    </div>
+  </div>
+</div>
+
+<script src="chat.js"></script>
+</body>
+</html>
