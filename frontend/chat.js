@@ -1,4 +1,5 @@
-const API = "http://localhost:8000";
+// Empty string = relative URLs, works both locally and in production
+const API = "";
 
 let sessionId = null;
 let practiceType = "dental";
