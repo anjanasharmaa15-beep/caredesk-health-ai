@@ -50,6 +50,7 @@ async function startChat() {
   const btn = document.getElementById("startBtn");
   btn.textContent = "Starting session…";
   btn.disabled = true;
+  document.getElementById("intakeError").style.display = "none";
 
   try {
     const res = await fetch(`${API}/session/start`, {
@@ -76,7 +77,7 @@ async function startChat() {
   } catch (e) {
     btn.textContent = "Begin conversation →";
     btn.disabled = false;
-    addSystemError(document.getElementById("messages"), null);
+    document.getElementById("intakeError").style.display = "block";
   }
 }
 
@@ -135,6 +136,7 @@ async function startTriage() {
   const btn = document.getElementById("triageStartBtn");
   btn.textContent = "Starting assessment…";
   btn.disabled = true;
+  document.getElementById("triageError").style.display = "none";
 
   try {
     const res = await fetch(`${API}/triage/start`, {
@@ -161,7 +163,7 @@ async function startTriage() {
   } catch (e) {
     btn.textContent = "Begin clinical assessment →";
     btn.disabled = false;
-    alert("Could not connect to CareDesk backend. Make sure the server is running.");
+    document.getElementById("triageError").style.display = "block";
   }
 }
 

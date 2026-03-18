@@ -249,7 +249,81 @@ body { font-family: var(--sans); background: var(--bg); color: var(--ink-1); min
 .confirm-ok { flex: 1; padding: 11px; border: none; background: #8B3A20; border-radius: var(--radius-sm); font-family: var(--sans); font-size: 13px; font-weight: 500; cursor: pointer; color: white; transition: background .15s; }
 .confirm-ok:hover { background: #6B2A14; }
 
-@media(max-width:720px){ .sidebar{display:none;} .main{padding:12px;} .form-row{grid-template-columns:1fr;} }
+/* ── MOBILE ── */
+@media(max-width:720px){
+  .sidebar { display:none; }
+  .main { padding:10px 10px 16px; }
+  .form-row { grid-template-columns:1fr; }
+}
+
+@media(max-width:640px){
+  /* Topbar — strip down to essentials */
+  .topbar { height:50px; padding:0 14px; }
+  .logo-name { font-size:18px; }
+  .logo-badge { display:none; }
+  .status-pill { display:none; }
+  .practice-select { display:none; }
+  .topbar-right { gap:8px; }
+  .topbar-icon-btn { width:34px; height:34px; }
+  .theme-btn { width:34px; height:34px; font-size:14px; }
+
+  /* Tabs */
+  .nav-tabs { padding:0 14px; }
+  .nav-tab { font-size:12px; padding:11px 14px; letter-spacing:0; }
+
+  /* Layout */
+  .main { padding:8px 8px 16px; }
+
+  /* Chat header */
+  .chat-header { padding:11px 14px; gap:9px; }
+  .bot-avatar { width:32px; height:32px; font-size:15px; }
+  .bot-name { font-size:13px; }
+  .bot-desc { display:none; }
+  .new-session-btn { padding:4px 9px; font-size:11px; white-space:nowrap; }
+
+  /* Progress bar */
+  .triage-progress { padding:7px 14px; font-size:11px; gap:7px; }
+  .step-dot { width:14px; height:3px; }
+
+  /* Messages */
+  .messages {
+    padding:12px;
+    gap:12px;
+    min-height:200px;
+    max-height:calc(100vh - 300px);
+  }
+  .bubble { max-width:84%; font-size:13px; padding:10px 12px; }
+  .msg-icon { width:26px; height:26px; font-size:12px; }
+  .msg-timestamp { font-size:9px; }
+
+  /* Input */
+  .input-area { padding:9px 12px; }
+  .input-area textarea { font-size:13px; padding:8px 11px; }
+  .send-btn { width:38px; height:38px; flex-shrink:0; }
+  .chat-footer { font-size:10px; padding:5px 12px 7px; }
+
+  /* Modals — scrollable on small phones */
+  .modal-overlay { align-items:flex-start; padding:0; }
+  .modal {
+    width:100%;
+    max-width:100%;
+    border-radius:0;
+    min-height:100dvh;
+    padding:28px 18px 32px;
+    overflow-y:auto;
+  }
+
+  /* Drawer — full width on mobile */
+  .drawer { width:100%; max-width:100%; }
+
+  /* Confirm modal */
+  .confirm-box { width:92vw; padding:22px 18px 18px; }
+  .confirm-actions { flex-direction:column; }
+  .confirm-cancel, .confirm-ok { padding:12px; }
+
+  /* Tool badge row */
+  .tool-badge-row { padding-left:30px; }
+}
 </style>
 </head>
 <body>
@@ -305,6 +379,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--ink-1); min
       <label class="form-label">Anything specific? <span style="color:var(--ink-3);font-weight:400">(optional)</span></label>
       <input class="form-input" id="intakeNote" type="text" placeholder="e.g. wisdom tooth pain since yesterday" />
     </div>
+    <div id="intakeError" style="display:none;background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:var(--radius-sm);padding:10px 13px;font-size:12px;color:var(--danger-ink);margin-bottom:12px;line-height:1.5;">⚠️ Could not connect to backend. Make sure the server is running and try again.</div>
     <button class="start-btn" id="startBtn" onclick="startChat()">Begin conversation →</button>
     <div class="intake-note">No account needed · Your responses are never stored externally</div>
   </div>
@@ -348,6 +423,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--ink-1); min
     <div style="background:var(--gold-soft);border:1px solid var(--danger-border);border-radius:var(--radius-sm);padding:11px 13px;margin-bottom:14px;font-size:12px;color:var(--danger-ink);line-height:1.6;">
       ⚠️ <strong>This is not a substitute for emergency care.</strong> If you have chest pain, difficulty breathing, or feel your life is at risk — call <strong>911</strong> immediately.
     </div>
+    <div id="triageError" style="display:none;background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:var(--radius-sm);padding:10px 13px;font-size:12px;color:var(--danger-ink);margin-bottom:12px;line-height:1.5;">⚠️ Could not connect to backend. Make sure the server is running and try again.</div>
     <button class="start-btn" id="triageStartBtn" onclick="startTriage()" style="background:var(--gold);">Begin clinical assessment →</button>
     <div class="intake-note">For informational purposes only · Always follow up with a licensed doctor</div>
   </div>
