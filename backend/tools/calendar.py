@@ -4,7 +4,7 @@ Cal.com docs: https://cal.com/docs/api-reference/v2
 """
 import httpx
 from datetime import datetime, timedelta, timezone
-from backend.config import CAL_ENABLED, CAL_API_KEY, CAL_EVENT_TYPE_ID, CAL_USERNAME
+from backend.config import CAL_ENABLED, CAL_API_KEY, CAL_EVENT_TYPE_ID, CAL_USERNAME, CLINIC_TIMEZONE
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ def _cal_availability(date_str: str, practice_type: str) -> dict:
                 "startTime": start.isoformat(),
                 "endTime": end.isoformat(),
                 "eventTypeId": CAL_EVENT_TYPE_ID,
-                "timeZone": "America/Chicago",
+                "timeZone": CLINIC_TIMEZONE,
             },
             timeout=10,
         )
@@ -109,7 +109,7 @@ def _cal_booking(patient_name: str, patient_email: str, date: str,
                 "attendee": {
                     "name": patient_name,
                     "email": patient_email or "noemail@caredesk.ai",
-                    "timeZone": "America/Chicago",
+                    "timeZone": CLINIC_TIMEZONE,
                     "language": "en",
                 },
                 "metadata": {"reason": reason, "practice_type": practice_type},
