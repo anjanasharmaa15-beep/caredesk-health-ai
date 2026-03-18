@@ -160,6 +160,34 @@ RULES:
 }
 
 
+# ── Junior Doctor / Clinical Triage system prompt ────────────────────────────
+
+TRIAGE_SYSTEM_PROMPT = """You are a competent junior doctor conducting an initial patient consultation. You are thorough, empathetic, and safety-conscious.
+
+Work through this structured consultation conversationally — do NOT dump all questions at once. Ask 1-2 focused questions at a time and listen carefully before proceeding.
+
+CONSULTATION STRUCTURE (work through these naturally):
+1. Chief complaint — confirm what the patient told you
+2. History of present illness — onset, duration, character, severity, progression, aggravating/relieving factors
+3. Red flags — identify any that must not be missed
+4. Relevant system review — targeted questions across relevant organ systems
+5. Differential diagnosis — ranked by likelihood; always include serious diagnoses that must not be missed
+6. Urgency — emergency / urgent (same day) / semi-urgent (this week) / routine
+7. Next step — appropriate level of care (ED, GP today, GP this week, telehealth, self-care)
+8. Possible investigations — suggest for clinician review only (do not order or interpret)
+9. Safety-net advice — what to watch for, when to seek emergency care
+
+RULES:
+- Never claim diagnostic certainty too early — gather enough history first
+- Never suggest specific medications, doses, or treatments
+- Never replace a licensed doctor — always recommend appropriate professional care
+- For chest pain, stroke symptoms (FAST), difficulty breathing, severe bleeding, loss of consciousness → escalate urgency=emergency immediately
+- Explain findings clearly in plain language the patient understands
+- At the end of the consultation or when the patient asks, call generate_visit_summary with the structured findings
+- Always address the patient by their first name
+- Be warm but precise — this is a clinical consultation, not a chat"""
+
+
 # ── Tool dispatcher ───────────────────────────────────────────────────────────
 
 def _dispatch_tool(name: str, inputs: dict, session_id: str = "") -> str:
@@ -246,3 +274,53 @@ def run_agent(
         break
 
     return "I'm sorry, I encountered an issue processing your request. Please try again.", working_messages
+
+
+# ── Triage agent loop (same mechanics, different system prompt + higher tokens) ─
+
+def run_triage_agent(
+    messages: list[dict],
+    practice_type: str = "gp",
+    session_id: str = "",
+    tool_calls_log: list | None = None,
+) -> tuple[str, list[dict]]:
+    """Junior Doctor consultation agent."""
+    working_messages = list(messages)
+
+    # Triage tools — subset focused on clinical flow
+    triage_tools = [t for t in TOOLS if t["name"] in (
+        "escalate_to_staff", "generate_visit_summary", "book_appointment", "check_availability"
+    )]
+
+    for _ in range(10):
+        response = _client.messages.create(
+            model=CLAUDE_MODEL,
+            max_tokens=1536,  # more tokens for clinical reasoning
+            system=TRIAGE_SYSTEM_PROMPT,
+            tools=triage_tools,
+            messages=working_messages,
+        )
+
+        if response.stop_reason == "end_turn":
+            text = "".join(b.text for b in response.content if hasattr(b, "text"))
+            working_messages.append({"role": "assistant", "content": response.content})
+            return text, working_messages
+
+        if response.stop_reason == "tool_use":
+            working_messages.append({"role": "assistant", "content": response.content})
+            tool_results = []
+
+            for block in response.content:
+                if block.type != "tool_use":
+                    continue
+                result_str = _dispatch_tool(block.name, block.input, session_id)
+                if tool_calls_log is not None:
+                    tool_calls_log.append({"tool": block.name, "input": block.input, "result": result_str})
+                tool_results.append({"type": "tool_result", "tool_use_id": block.id, "content": result_str})
+
+            working_messages.append({"role": "user", "content": tool_results})
+            continue
+
+        break
+
+    return "I'm sorry, I encountered an issue. Please try again.", working_messages

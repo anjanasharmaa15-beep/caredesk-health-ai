@@ -5,7 +5,6 @@ Run: uvicorn backend.main:app --reload --port 8000
 import uuid
 import traceback
 import logging
-from datetime import datetime
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request
@@ -14,7 +13,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from backend.agent import run_agent
+from backend.agent import run_agent, run_triage_agent
+from backend import database as db
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -33,9 +33,10 @@ async def global_exception_handler(request: Request, exc: Exception):
     logger.error("Unhandled exception: %s\n%s", exc, traceback.format_exc())
     return JSONResponse(status_code=500, content={"detail": str(exc), "type": type(exc).__name__})
 
-# ── In-memory session store (swap for Redis/DB in production) ─────────────────
-
-sessions: dict[str, dict] = {}
+@app.on_event("startup")
+def startup():
+    db.init_db()
+    logger.info("CareDesk DB initialised")
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
@@ -43,136 +44,170 @@ sessions: dict[str, dict] = {}
 class StartSessionRequest(BaseModel):
     first_name: str
     last_name: Optional[str] = ""
-    patient_type: str  # new | returning | caregiver
-    practice_type: str  # dental | gp | physio | pediatric
+    patient_type: str
+    practice_type: str
     reason: str
     note: Optional[str] = ""
 
+class StartTriageRequest(BaseModel):
+    first_name: str
+    last_name: Optional[str] = ""
+    age: str
+    sex: str
+    chief_complaint: str
 
 class ChatRequest(BaseModel):
     session_id: str
     message: str
 
 
-class SummaryRequest(BaseModel):
-    session_id: str
-
-
-# ── Routes ────────────────────────────────────────────────────────────────────
+# ── Front Desk Routes ─────────────────────────────────────────────────────────
 
 @app.post("/session/start")
 def start_session(req: StartSessionRequest):
     session_id = str(uuid.uuid4())[:8]
     patient_name = f"{req.first_name} {req.last_name}".strip()
 
-    # First user message pre-populated from intake form
     patient_type_label = {
-        "new": "a NEW patient (never visited before)",
+        "new":       "a NEW patient (never visited before)",
         "returning": "a RETURNING patient (have visited before)",
         "caregiver": "a CAREGIVER or parent acting on behalf of a patient",
     }.get(req.patient_type, req.patient_type)
 
-    first_user_msg = (
+    first_msg = (
         f"My name is {patient_name}. I am {patient_type_label}. "
         f"My main reason for contacting you today is: {req.reason}."
         + (f" Additional context: {req.note}." if req.note else "")
-        + " Please greet me appropriately based on my patient type and help me."
+        + " Please greet me appropriately and help me."
     )
 
-    sessions[session_id] = {
-        "session_id": session_id,
-        "patient_name": patient_name,
-        "patient_type": req.patient_type,
-        "practice_type": req.practice_type,
-        "reason": req.reason,
-        "messages": [{"role": "user", "content": first_user_msg}],
-        "tool_calls": [],
-        "escalations": [],
-        "created_at": datetime.now().isoformat(),
-    }
+    db.create_session(session_id, patient_name, req.patient_type, req.practice_type, req.reason, mode="frontdesk")
+    db.save_message(session_id, "user", first_msg)
 
-    # Run agent for the greeting
-    reply, updated_messages = run_agent(
-        messages=sessions[session_id]["messages"],
+    messages = db.load_messages(session_id)
+    tool_log: list = []
+
+    reply, updated = run_agent(
+        messages=messages,
         practice_type=req.practice_type,
         session_id=session_id,
-        tool_calls_log=sessions[session_id]["tool_calls"],
+        tool_calls_log=tool_log,
     )
-    sessions[session_id]["messages"] = updated_messages
-    _sync_escalations(session_id)
 
-    return {
-        "session_id": session_id,
-        "reply": reply,
-        "practice_type": req.practice_type,
-        "escalations": sessions[session_id]["escalations"],
-    }
+    _persist_messages(session_id, messages, updated)
+    _persist_tool_calls(session_id, tool_log)
+    escalations = db.load_escalations(session_id)
+
+    return {"session_id": session_id, "reply": reply, "practice_type": req.practice_type, "escalations": escalations}
 
 
 @app.post("/chat")
 def chat(req: ChatRequest):
-    session = sessions.get(req.session_id)
+    session = db.get_session(req.session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    session["messages"].append({"role": "user", "content": req.message})
+    db.save_message(req.session_id, "user", req.message)
+    messages = db.load_messages(req.session_id)
+    tool_log: list = []
 
-    reply, updated_messages = run_agent(
-        messages=session["messages"],
+    runner = run_triage_agent if session["mode"] == "triage" else run_agent
+
+    reply, updated = runner(
+        messages=messages,
         practice_type=session["practice_type"],
         session_id=req.session_id,
-        tool_calls_log=session["tool_calls"],
+        tool_calls_log=tool_log,
     )
-    session["messages"] = updated_messages
-    _sync_escalations(req.session_id)
 
-    return {
-        "reply": reply,
-        "escalations": session["escalations"],
-        "tool_calls": session["tool_calls"][-3:],  # last 3 for UI display
-    }
+    _persist_messages(req.session_id, messages, updated)
+    _persist_tool_calls(req.session_id, tool_log)
+    tool_calls = db.load_tool_calls(req.session_id)
+    escalations = db.load_escalations(req.session_id)
 
+    return {"reply": reply, "escalations": escalations, "tool_calls": tool_calls[-3:]}
+
+
+# ── Triage Routes ─────────────────────────────────────────────────────────────
+
+@app.post("/triage/start")
+def start_triage(req: StartTriageRequest):
+    session_id = str(uuid.uuid4())[:8]
+    patient_name = f"{req.first_name} {req.last_name}".strip()
+
+    first_msg = (
+        f"My name is {patient_name}. I am {req.age} years old, biological sex: {req.sex}. "
+        f"My main concern today is: {req.chief_complaint}. "
+        "Please begin the consultation."
+    )
+
+    db.create_session(session_id, patient_name, "patient", "gp", req.chief_complaint, mode="triage")
+    db.save_message(session_id, "user", first_msg)
+
+    messages = db.load_messages(session_id)
+    tool_log: list = []
+
+    reply, updated = run_triage_agent(
+        messages=messages,
+        practice_type="gp",
+        session_id=session_id,
+        tool_calls_log=tool_log,
+    )
+
+    _persist_messages(session_id, messages, updated)
+    _persist_tool_calls(session_id, tool_log)
+    escalations = db.load_escalations(session_id)
+
+    return {"session_id": session_id, "reply": reply, "escalations": escalations}
+
+
+# ── Summary ───────────────────────────────────────────────────────────────────
 
 @app.get("/session/{session_id}/summary")
 def get_summary(session_id: str):
-    session = sessions.get(session_id)
+    session = db.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+    messages = db.load_messages(session_id)
+    tool_calls = db.load_tool_calls(session_id)
+    escalations = db.load_escalations(session_id)
     return {
-        "patient_name": session["patient_name"],
-        "patient_type": session["patient_type"],
-        "practice_type": session["practice_type"],
-        "reason": session["reason"],
-        "message_count": sum(1 for m in session["messages"] if m["role"] == "user"),
-        "escalations": session["escalations"],
-        "tool_calls": session["tool_calls"],
-        "created_at": session["created_at"],
+        **session,
+        "message_count": sum(1 for m in messages if m["role"] == "user"),
+        "escalations": escalations,
+        "tool_calls": tool_calls,
     }
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "sessions": len(sessions)}
+    conn = db._conn()
+    count = conn.execute("SELECT COUNT(*) FROM sessions").fetchone()[0]
+    conn.close()
+    return {"status": "ok", "total_sessions": count}
 
 
-# ── Helper ────────────────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _sync_escalations(session_id: str):
-    """Extract escalation tool calls into the session's escalation list."""
-    session = sessions[session_id]
-    esc_calls = [
-        tc for tc in session["tool_calls"]
-        if tc["tool"] == "escalate_to_staff"
-    ]
-    session["escalations"] = [
-        {
-            "reason": tc["input"].get("reason", ""),
-            "urgency": tc["input"].get("urgency", "low"),
-            "patient_name": tc["input"].get("patient_name", session["patient_name"]),
-            "summary": tc["input"].get("summary", ""),
-        }
-        for tc in esc_calls
-    ]
+def _persist_messages(session_id: str, before: list, after: list):
+    """Save only the new messages added by the agent loop."""
+    new_msgs = after[len(before):]
+    for m in new_msgs:
+        db.save_message(session_id, m["role"], m["content"])
+
+
+def _persist_tool_calls(session_id: str, tool_log: list):
+    for tc in tool_log:
+        db.save_tool_call(session_id, tc["tool"], tc.get("input", {}), tc.get("result", ""))
+        if tc["tool"] == "escalate_to_staff":
+            inp = tc.get("input", {})
+            db.save_escalation(
+                session_id,
+                inp.get("patient_name", ""),
+                inp.get("reason", ""),
+                inp.get("urgency", "low"),
+                inp.get("summary", ""),
+            )
 
 
 # ── Serve frontend ────────────────────────────────────────────────────────────

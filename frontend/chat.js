@@ -5,6 +5,9 @@ let sessionId = null;
 let practiceType = "dental";
 let escalations = [];
 
+let triageSessionId = null;
+let triageEscalations = [];
+
 // ── Dark mode ─────────────────────────────────────────────────────────────────
 
 function initTheme() {
@@ -263,13 +266,171 @@ function clearChat() {
   document.getElementById("intakeModal").style.display = "flex";
 }
 
+// ── Clinical Triage ───────────────────────────────────────────────────────────
+
+async function startTriage() {
+  const first = document.getElementById("triageFirst").value.trim();
+  const age   = document.getElementById("triageAge").value.trim();
+  const sex   = document.getElementById("triageSex").value;
+  const complaint = document.getElementById("triageComplaint").value.trim();
+
+  // Validate required fields
+  let valid = true;
+  ["triageFirst", "triageAge", "triageSex", "triageComplaint"].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el.value.trim()) { el.style.borderColor = "#C94040"; valid = false; }
+    else el.style.borderColor = "";
+  });
+  if (!valid) return;
+
+  const btn = document.getElementById("triageStartBtn");
+  btn.textContent = "Starting assessment…";
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API}/triage/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        first_name: first,
+        last_name: document.getElementById("triageLast").value.trim(),
+        age,
+        sex,
+        chief_complaint: complaint,
+      }),
+    });
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+    const data = await res.json();
+    triageSessionId = data.session_id;
+    document.getElementById("triageModal").style.display = "none";
+    addTriageMessage(data.reply, true);
+    syncTriageEscalations(data.escalations || []);
+  } catch (e) {
+    alert("Could not connect to CareDesk backend. Make sure the server is running on port 8000.");
+    btn.textContent = "Begin clinical assessment →";
+    btn.disabled = false;
+  }
+}
+
+async function sendTriageMessage() {
+  const input = document.getElementById("triageInput");
+  const text = input.value.trim();
+  if (!text || !triageSessionId) return;
+
+  input.value = "";
+  input.style.height = "auto";
+  addTriageMessage(text, false);
+  addTriageTyping();
+  document.getElementById("triageSendBtn").disabled = true;
+
+  try {
+    const res = await fetch(`${API}/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: triageSessionId, message: text }),
+    });
+    if (!res.ok) throw new Error(`Server error ${res.status}`);
+    const data = await res.json();
+    removeTriageTyping();
+    addTriageMessage(data.reply, true);
+    syncTriageEscalations(data.escalations || []);
+  } catch (e) {
+    removeTriageTyping();
+    addTriageMessage("I'm having trouble connecting. Please check the server is running and try again.", true);
+  } finally {
+    document.getElementById("triageSendBtn").disabled = false;
+    document.getElementById("triageInput").focus();
+  }
+}
+
+function addTriageMessage(text, isBot) {
+  const msgs = document.getElementById("triageMessages");
+  const row = document.createElement("div");
+
+  if (isBot) {
+    row.className = "msg-row bot";
+    row.innerHTML = `
+      <div class="msg-icon bot" style="background:var(--gold-soft);border-color:var(--danger-border);">🩺</div>
+      <div>
+        <div class="bubble bot">${formatText(text)}</div>
+        <div class="msg-meta"><span class="disclaimer-tag">Clinical consultation · Not a substitute for professional care</span></div>
+      </div>`;
+  } else {
+    row.className = "msg-row user";
+    row.innerHTML = `<div class="msg-icon user">👤</div><div class="bubble user">${esc(text)}</div>`;
+  }
+
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addTriageTyping() {
+  const msgs = document.getElementById("triageMessages");
+  const row = document.createElement("div");
+  row.id = "triageTyping";
+  row.className = "msg-row bot";
+  row.innerHTML = `<div class="msg-icon bot" style="background:var(--gold-soft);border-color:var(--danger-border);">🩺</div><div class="bubble bot typing"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`;
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTriageTyping() {
+  document.getElementById("triageTyping")?.remove();
+}
+
+function clearTriage() {
+  triageSessionId = null;
+  triageEscalations = [];
+  document.getElementById("triageMessages").innerHTML = "";
+  document.getElementById("triageEscalationList").innerHTML = '<div class="esc-empty">No escalations this session.</div>';
+  document.getElementById("triageEscCount").style.display = "none";
+  document.getElementById("triageModal").style.display = "flex";
+  // Reset the start button in case it was disabled
+  const btn = document.getElementById("triageStartBtn");
+  btn.textContent = "Begin clinical assessment →";
+  btn.disabled = false;
+}
+
+function handleTriageKey(e) {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendTriageMessage(); }
+}
+
+function syncTriageEscalations(newEscs) {
+  triageEscalations = newEscs;
+  const list = document.getElementById("triageEscalationList");
+  const badge = document.getElementById("triageEscCount");
+  if (!triageEscalations.length) {
+    list.innerHTML = '<div class="esc-empty">No escalations this session.</div>';
+    badge.style.display = "none";
+    return;
+  }
+  badge.textContent = triageEscalations.length;
+  badge.style.display = "inline-flex";
+  list.innerHTML = triageEscalations.map(e =>
+    `<div class="esc-item"><strong>${cap(e.urgency)}</strong>: ${esc(e.reason)}</div>`
+  ).join("");
+}
+
+// ── Tab navigation ────────────────────────────────────────────────────────────
+
 function showTab(tab) {
-  const tabs = ["chat", "summary", "how"];
-  document.querySelectorAll(".nav-tab").forEach((t, i) => t.classList.toggle("active", tabs[i] === tab));
-  document.getElementById("chatTab").classList.toggle("active", tab === "chat");
-  document.getElementById("summaryTab").classList.toggle("active", tab === "summary");
+  // Update nav buttons
+  ["chat", "triage", "summary", "how"].forEach(t => {
+    const btn = document.getElementById(`tab-${t}`);
+    if (btn) btn.classList.toggle("active", t === tab);
+  });
+  // Toggle page divs
+  ["chatTab", "triageTab", "summaryTab"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("active", id === `${tab}Tab`);
+  });
+  // howTab has its own display rules
   document.getElementById("howTab").classList.toggle("active", tab === "how");
+
   if (tab === "summary") generateSummary();
+  if (tab === "triage" && !triageSessionId) {
+    document.getElementById("triageModal").style.display = "flex";
+  }
 }
 
 function changePractice() {

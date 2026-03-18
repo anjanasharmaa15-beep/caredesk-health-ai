@@ -728,11 +728,55 @@ body {
   </div>
 </div>
 
+<!-- TRIAGE INTAKE MODAL -->
+<div class="modal-overlay" id="triageModal" style="display:none;">
+  <div class="modal">
+    <div class="modal-brand" style="color:var(--gold);">CareDesk</div>
+    <div style="font-size:12px;font-weight:500;color:var(--gold);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Clinical Triage</div>
+    <div class="modal-tagline">Answer a few questions so our AI consultant can begin a structured assessment.</div>
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">First name *</label>
+        <input class="form-input" id="triageFirst" type="text" placeholder="Anjana" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Last name</label>
+        <input class="form-input" id="triageLast" type="text" placeholder="Sharma" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label class="form-label">Age *</label>
+        <input class="form-input" id="triageAge" type="number" placeholder="32" min="0" max="120" />
+      </div>
+      <div class="form-field">
+        <label class="form-label">Biological sex *</label>
+        <select class="form-input" id="triageSex">
+          <option value="">Select…</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other / prefer not to say</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-field">
+      <label class="form-label">Chief complaint — what is your main concern today? *</label>
+      <input class="form-input" id="triageComplaint" type="text" placeholder="e.g. chest pain since this morning" />
+    </div>
+    <div style="background:var(--gold-soft);border:1px solid var(--danger-border);border-radius:var(--radius-sm);padding:11px 13px;margin-bottom:14px;font-size:12px;color:var(--danger-ink);line-height:1.6;">
+      ⚠️ <strong>This is not a substitute for emergency care.</strong> If you have chest pain, difficulty breathing, or feel your life is at risk — call <strong>911</strong> immediately.
+    </div>
+    <button class="start-btn" id="triageStartBtn" onclick="startTriage()" style="background:var(--gold);">Begin clinical assessment →</button>
+    <div class="intake-note">For informational purposes only · Always follow up with a licensed doctor</div>
+  </div>
+</div>
+
 <!-- TABS -->
 <div class="nav-tabs">
-  <button class="nav-tab active" onclick="showTab('chat')">Assistant</button>
-  <button class="nav-tab" onclick="showTab('summary')">Visit Summary</button>
-  <button class="nav-tab" onclick="showTab('how')">How it works</button>
+  <button class="nav-tab active" id="tab-chat" onclick="showTab('chat')">Front Desk</button>
+  <button class="nav-tab" id="tab-triage" onclick="showTab('triage')">🩺 Clinical Triage</button>
+  <button class="nav-tab" id="tab-summary" onclick="showTab('summary')">Visit Summary</button>
+  <button class="nav-tab" id="tab-how" onclick="showTab('how')">How it works</button>
 </div>
 
 <!-- CHAT TAB -->
@@ -792,6 +836,61 @@ body {
           <textarea id="userInput" placeholder="Ask about appointments, symptoms, billing…" rows="1"
             onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
           <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRIAGE TAB -->
+<div class="page" id="triageTab">
+  <div class="main">
+    <div class="sidebar">
+      <div class="panel" style="border-color:var(--gold);background:var(--gold-soft);">
+        <div class="panel-title" style="color:var(--gold);">About Clinical Triage</div>
+        <div style="font-size:12px;color:var(--ink-2);line-height:1.65;">
+          Our AI consultant follows a structured 9-step clinical consultation — the same framework used by junior doctors for initial assessments.
+          <br><br>
+          <strong>It will:</strong><br>
+          • Take a detailed history<br>
+          • Check for red flags & emergencies<br>
+          • Generate a differential diagnosis<br>
+          • Recommend appropriate care<br>
+          • Suggest investigations<br>
+          • Provide a clinical summary
+        </div>
+      </div>
+      <div class="emergency-panel" style="background:var(--danger-bg);border-color:var(--danger-border);">
+        <strong style="display:block;margin-bottom:3px;font-size:12px;color:var(--danger-ink);">Emergency?</strong>
+        <span style="font-size:11.5px;color:var(--danger-ink);">Call <strong>911</strong> or go to your nearest ER immediately. Do not use this tool.</span>
+      </div>
+      <div class="panel">
+        <div class="panel-title">
+          Escalation log
+          <span class="esc-count" id="triageEscCount" style="display:none">0</span>
+        </div>
+        <div id="triageEscalationList"><div class="esc-empty">No escalations this session.</div></div>
+      </div>
+    </div>
+
+    <div class="chat-area">
+      <div class="chat-window">
+        <div class="chat-header">
+          <div class="bot-avatar" style="background:var(--gold-soft);border-color:var(--danger-border);">🩺</div>
+          <div>
+            <div class="bot-name" style="font-family:var(--serif);">Dr. Aiden — Clinical Consultant</div>
+            <div class="bot-desc">AI junior doctor · Structured 9-step consultation · Not a substitute for professional care</div>
+          </div>
+          <button class="new-session-btn" onclick="clearTriage()">New session</button>
+        </div>
+        <div class="messages" id="triageMessages"></div>
+        <div class="chat-footer">For informational purposes only · Always consult a licensed healthcare professional · Not for emergencies</div>
+        <div class="input-area">
+          <textarea id="triageInput" placeholder="Describe your symptoms or answer the doctor's question…" rows="1"
+            onkeydown="handleTriageKey(event)" oninput="autoResize(this)"></textarea>
+          <button class="send-btn" id="triageSendBtn" onclick="sendTriageMessage()" style="background:var(--gold);">
             <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
           </button>
         </div>
