@@ -56,11 +56,17 @@ def start_session(req: StartSessionRequest):
     patient_name = f"{req.first_name} {req.last_name}".strip()
 
     # First user message pre-populated from intake form
+    patient_type_label = {
+        "new": "a NEW patient (never visited before)",
+        "returning": "a RETURNING patient (have visited before)",
+        "caregiver": "a CAREGIVER or parent acting on behalf of a patient",
+    }.get(req.patient_type, req.patient_type)
+
     first_user_msg = (
-        f"My name is {patient_name}. I am a {req.patient_type} patient. "
+        f"My name is {patient_name}. I am {patient_type_label}. "
         f"My main reason for contacting you today is: {req.reason}."
         + (f" Additional context: {req.note}." if req.note else "")
-        + " Please greet me and help me."
+        + " Please greet me appropriately based on my patient type and help me."
     )
 
     sessions[session_id] = {
