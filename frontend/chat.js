@@ -1,6 +1,12 @@
 // Empty string = relative URLs, works both locally and in production
 const API = "";
 
+// ── Keepalive — ping every 4 min to prevent Railway cold-start sleep ──────────
+(function keepAlive() {
+  fetch(`${API}/health`).catch(() => {});
+  setInterval(() => fetch(`${API}/health`).catch(() => {}), 4 * 60 * 1000);
+})();
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let sessionId        = null;
 let practiceType     = "dental";
@@ -428,7 +434,7 @@ function addSystemError(messagesEl, retryFn) {
   const div = document.createElement("div");
   div.className = "system-error";
   if (retryFn) {
-    div.innerHTML = `<span>⚠️ Connection issue — your message was not sent.</span><button class="retry-btn">↩ Retry</button>`;
+    div.innerHTML = `<span>⚠️ Connection issue — server may be waking up. Your message was not sent.</span><button class="retry-btn">↩ Retry</button>`;
     div.querySelector(".retry-btn").addEventListener("click", () => { div.remove(); retryFn(); });
   } else {
     div.innerHTML = `<span>⚠️ Could not connect to backend. Make sure the server is running.</span>`;
