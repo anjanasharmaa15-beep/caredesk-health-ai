@@ -86,10 +86,14 @@ async function sendMessage() {
   const input = document.getElementById("userInput");
   const text = input.value.trim();
   if (!text || !sessionId) return;
-
   input.value = "";
   input.style.height = "auto";
   addUserMessage(text);
+  await _submitMessage(text);
+}
+
+async function _submitMessage(text) {
+  const input = document.getElementById("userInput");
   addTyping();
   document.getElementById("sendBtn").disabled = true;
   document.getElementById("messages").querySelector(".system-error")?.remove();
@@ -109,12 +113,10 @@ async function sendMessage() {
     showToolBadges(data.tool_calls || []);
   } catch (e) {
     removeTyping();
-    input.value = text; // restore so user can retry
-    autoResize(input);
-    addSystemError(document.getElementById("messages"), sendMessage);
+    addSystemError(document.getElementById("messages"), () => _submitMessage(text));
   } finally {
     document.getElementById("sendBtn").disabled = false;
-    document.getElementById("userInput").focus();
+    input.focus();
   }
 }
 
@@ -172,10 +174,14 @@ async function sendTriageMessage() {
   const input = document.getElementById("triageInput");
   const text = input.value.trim();
   if (!text || !triageSessionId) return;
-
   input.value = "";
   input.style.height = "auto";
   addTriageMessage(text, false);
+  await _submitTriageMessage(text);
+}
+
+async function _submitTriageMessage(text) {
+  const input = document.getElementById("triageInput");
   addTriageTyping();
   document.getElementById("triageSendBtn").disabled = true;
   document.getElementById("triageMessages").querySelector(".system-error")?.remove();
@@ -194,12 +200,10 @@ async function sendTriageMessage() {
     syncTriageEscalations(data.escalations || []);
   } catch (e) {
     removeTriageTyping();
-    input.value = text; // restore so user can retry
-    autoResize(input);
-    addSystemError(document.getElementById("triageMessages"), sendTriageMessage);
+    addSystemError(document.getElementById("triageMessages"), () => _submitTriageMessage(text));
   } finally {
     document.getElementById("triageSendBtn").disabled = false;
-    document.getElementById("triageInput").focus();
+    input.focus();
   }
 }
 
